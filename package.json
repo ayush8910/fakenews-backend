@@ -1,16 +1,15 @@
 {
-  "name": "fake-news-detector",
+  "name": "fake-news-detector-api",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
-  "keywords": ["fake news", "gemini api", "image analysis"],
+  "keywords": ["api", "fake news", "gemini api"],
   "author": "",
   "license": "ISC",
   "type": "module",
-  "description": "An application to detect fake news from images using Gemini API",
+  "description": "API to detect fake news from images using Gemini API",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
