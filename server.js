@@ -1,54 +1,89 @@
-import express from 'express';
-import cors from 'cors';
-import multer from 'multer';
-import fetch from 'node-fetch';
-import { createServer } from '@vercel/node';
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors({
-  origin: '*' // Or specify your localhost URL for better security
-}));
-const upload = multer({ storage: multer.memoryStorage() });
+const PORT = process.env.PORT || 3000;
+const API_KEY = "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM"; // Replace with your actual API key
 
-const API_KEY = "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM";
+// Multer config
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-app.post('/api/check-fake-news', upload.single('image'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+// Enable CORS for all routes
+app.use(cors());
 
-  try {
-    const base64Image = req.file.buffer.toString('base64');
-    const mimeType = req.file.mimetype;
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
-    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            { text: "Analyze this image and tell me if it might be fake news or misinformation. Provide a reason." },
-            {
-              inline_data: {
-                mime_type: mimeType,
-                data: base64Image
-              }
-            }
-          ]
+// Image + text prompt handling with Gemini 2.0 Flash
+app.post("/check-fake-news", upload.single('image'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: "No image file uploaded." });
+    }
+
+    try {
+        const imageBuffer = req.file.buffer;
+        const mimeType = req.file.mimetype;
+        const imageBase64 = imageBuffer.toString('base64');
+
+        // Use Gemini 2.0 Flash endpoint
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
+        const requestBody = {
+            contents: [{
+                parts: [
+                    { text: "Analyze this image and tell me if it might be fake news or misinformation. Provide a reason." },
+                    {
+                        inline_data: {
+                            mime_type: mimeType,
+                            data: imageBase64
+                        }
+                    }
+                ]
+            }]
+        };
+
+        const geminiResponse = await fetch(geminiApiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!geminiResponse.ok) {
+            const errorData = await geminiResponse.text();
+            console.error("Gemini API Error Status:", geminiResponse.status);
+            console.error("Gemini API Error Response:", errorData);
+            throw new Error(`Gemini API request failed with status: ${geminiResponse.status}`);
         }
-      ]
-    };
 
-    const response = await fetch(geminiApiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody)
-    });
+        const data = await geminiResponse.json();
 
-    const result = await response.json();
-    const finalText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini";
-    res.json({ result: finalText });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Something went wrong" });
-  }
+        let resultText = "No analysis available.";
+        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+            resultText = data.candidates[0].content.parts[0].text;
+        } else {
+            console.warn("Unexpected Gemini response structure:", data);
+        }
+
+        res.json({ result: resultText });
+
+    } catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Failed to process image and get analysis." });
+    }
 });
 
-export default createServer(app);
+// Serve index.html for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
