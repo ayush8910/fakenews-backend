@@ -2,26 +2,18 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.API_KEY || "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM"; // Preferably use environment variable
+const API_KEY = "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM"; // Replace with your actual API key
 
 // Multer config
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Configure CORS to allow requests from any origin
-app.use(cors({
-  origin: '*', // This allows requests from any origin
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Health check endpoint
-app.get("/", (req, res) => {
-  res.json({ status: "API is running" });
-});
+app.use(cors());
 
 // Image + text prompt handling with Gemini 2.0 Flash
 app.post("/check-fake-news", upload.single('image'), async (req, res) => {
@@ -40,7 +32,21 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
         const requestBody = {
             contents: [{
                 parts: [
-                    { text: "Analyze this image and tell me if it might be fake news or misinformation. Provide a reason." },
+                    { 
+                        text: "Carefully analyze the text in this image and determine if it contains potentially false information or fake news. " +
+                              "First, extract and verify all factual claims made in the image text. " +
+                              "Then, perform a web search to check the accuracy of these claims. " +
+                              "Provide your assessment with reasoning, citing sources if available. " +
+                              "Consider the following in your analysis:\n" +
+                              "1. Are the claims verifiable through reputable sources?\n" +
+                              "2. Does the image contain any signs of manipulation or misleading context?\n" +
+                              "3. Are there any logical inconsistencies in the claims?\n" +
+                              "Format your response with:\n" +
+                              "- Summary of image content\n" +
+                              "- Fact-checking results\n" +
+                              "- Verdict (Likely True, Possibly Misleading, Likely False)\n" +
+                              "- Supporting evidence"
+                    },
                     {
                         inline_data: {
                             mime_type: mimeType,
@@ -48,7 +54,10 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
                         }
                     }
                 ]
-            }]
+            }],
+            generationConfig: {
+                enableWebSearch: true  // Enable web search for fact-checking
+            }
         };
 
         const geminiResponse = await fetch(geminiApiUrl, {
@@ -81,4 +90,4 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
