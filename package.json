@@ -1,25 +1,23 @@
 {
-  "name": "fakenews",
+  "name": "fake-news-detector",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": [],
+  "keywords": ["fake news", "gemini api", "image analysis"],
   "author": "",
   "license": "ISC",
   "type": "module",
-  "description": "",
+  "description": "An application to detect fake news from images using Gemini API",
   "dependencies": {
-    "@vercel/node": "^3.2.0",   
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "multer": "^1.4.5-lts.2",
     "node-fetch": "^3.3.2"
   },
   "engines": {
-    "node": ">=16.x"
+    "node": ">=18.0.0"
   }
 }
