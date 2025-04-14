@@ -2,26 +2,26 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import multer from "multer";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_KEY = "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM"; // Replace with your actual API key
+const API_KEY = process.env.API_KEY || "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM"; // Preferably use environment variable
 
 // Multer config
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Enable CORS for all routes
-app.use(cors());
+// Configure CORS to allow requests from any origin
+app.use(cors({
+  origin: '*', // This allows requests from any origin
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({ status: "API is running" });
+});
 
 // Image + text prompt handling with Gemini 2.0 Flash
 app.post("/check-fake-news", upload.single('image'), async (req, res) => {
@@ -79,11 +79,6 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
         console.error("Error processing request:", error);
         res.status(500).json({ error: "Failed to process image and get analysis." });
     }
-});
-
-// Serve index.html for all other routes
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
