@@ -1,9 +1,15 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/check-fake-news.js", "use": "@vercel/node" }
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/api/check-fake-news", "dest": "/api/check-fake-news.js" }
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    }
   ]
 }
