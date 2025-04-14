@@ -54,10 +54,7 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
                         }
                     }
                 ]
-            }],
-            generationConfig: {
-                enableWebSearch: true  // Enable web search for fact-checking
-            }
+            }]
         };
 
         const geminiResponse = await fetch(geminiApiUrl, {
