@@ -2,12 +2,16 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import multer from "multer";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = "AIzaSyAsealsJB-a5XioYFUe1VK0iKyOsVENlQM"; // Replace with your actual API key
+
+// Simple cache implementation to store results by image hash
+const resultCache = new Map();
 
 // Multer config
 const storage = multer.memoryStorage();
@@ -24,6 +28,16 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
     try {
         const imageBuffer = req.file.buffer;
         const mimeType = req.file.mimetype;
+        
+        // Create a hash of the image buffer to use as cache key
+        const imageHash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
+        
+        // Check if we have a cached result for this exact image
+        if (resultCache.has(imageHash)) {
+            console.log("Returning cached result for image");
+            return res.json({ result: resultCache.get(imageHash) });
+        }
+        
         const imageBase64 = imageBuffer.toString('base64');
 
         // Use Gemini 2.0 Flash endpoint
@@ -33,19 +47,22 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
             contents: [{
                 parts: [
                     { 
-                        text: "Carefully analyze the text in this image and determine if it contains potentially false information or fake news. " +
-                              "First, extract and verify all factual claims made in the image text. " +
-                              "Then, perform a web search to check the accuracy of these claims. " +
-                              "Provide your assessment with reasoning, citing sources if available. " +
-                              "Consider the following in your analysis:\n" +
-                              "1. Are the claims verifiable through reputable sources?\n" +
-                              "2. Does the image contain any signs of manipulation or misleading context?\n" +
-                              "3. Are there any logical inconsistencies in the claims?\n" +
-                              "Format your response with:\n" +
-                              "- Summary of image content\n" +
-                              "- Fact-checking results\n" +
-                              "- Verdict (Likely True, Possibly Misleading, Likely False)\n" +
-                              "- Supporting evidence"
+                        text: "You are a consistent fact-checking system analyzing images for misleading or false information. Follow these exact steps for every analysis:\n\n" +
+                              "Step 1: Extract all text visible in the image precisely.\n" +
+                              "Step 2: Identify specific factual claims present in the text.\n" +
+                              "Step 3: Evaluate each claim systematically using these criteria:\n" +
+                              "   - Logical consistency\n" +
+                              "   - Presence of verifiable facts\n" +
+                              "   - Apparent source credibility\n" +
+                              "   - Consistency with established knowledge\n\n" +
+                              "Your response MUST follow this exact structure:\n" +
+                              "1. IMAGE CONTENT: [Brief factual description of what's in the image]\n" +
+                              "2. EXTRACTED CLAIMS: [Numbered list of specific claims made]\n" +
+                              "3. ANALYSIS: [Systematic assessment of each claim]\n" +
+                              "4. VERDICT: [MUST choose only ONE: \"LIKELY TRUE\", \"UNVERIFIABLE\", \"POSSIBLY MISLEADING\", or \"LIKELY FALSE\"]\n" +
+                              "5. CONFIDENCE: [HIGH, MEDIUM, or LOW]\n" +
+                              "6. REASONING: [Brief explanation of your verdict]\n\n" +
+                              "Important: Focus only on verifiable facts. Do not speculate beyond what can be determined from the image content. Maintain a neutral tone throughout your analysis."
                     },
                     {
                         inline_data: {
@@ -54,7 +71,13 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
                         }
                     }
                 ]
-            }]
+            }],
+            generationConfig: {
+                temperature: 0.2,       // Lower temperature for more deterministic results
+                topP: 0.8,              // Lower top-p for more focused outputs
+                topK: 40,               // Standard top-k parameter
+                maxOutputTokens: 1024    // Limit output size
+            }
         };
 
         const geminiResponse = await fetch(geminiApiUrl, {
@@ -75,6 +98,15 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
         let resultText = "No analysis available.";
         if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
             resultText = data.candidates[0].content.parts[0].text;
+            
+            // Store the result in cache
+            resultCache.set(imageHash, resultText);
+            
+            // Limit cache size to prevent memory issues (optional)
+            if (resultCache.size > 1000) {
+                const oldestKey = resultCache.keys().next().value;
+                resultCache.delete(oldestKey);
+            }
         } else {
             console.warn("Unexpected Gemini response structure:", data);
         }
