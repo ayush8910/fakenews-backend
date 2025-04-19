@@ -55,13 +55,15 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
                               "   - Presence of verifiable facts\n" +
                               "   - Apparent source credibility\n" +
                               "   - Consistency with established knowledge\n\n" +
-                              "Your response MUST follow this exact structure:\n" +
+                              "CRITICAL INSTRUCTION: Your response MUST begin with EXACTLY ONE of these three words: \"True\", \"False\", or \"Uncertain\" followed by a space and then your detailed analysis. Choose the word that best represents your overall assessment.\n\n" +
+                              "After that first word, your detailed analysis MUST follow this exact structure:\n" +
                               "1. IMAGE CONTENT: [Brief factual description of what's in the image]\n" +
                               "2. EXTRACTED CLAIMS: [Numbered list of specific claims made]\n" +
                               "3. ANALYSIS: [Systematic assessment of each claim]\n" +
-                              "4. VERDICT: [MUST choose only ONE: \"LIKELY TRUE\", \"UNVERIFIABLE\", \"POSSIBLY MISLEADING\", or \"LIKELY FALSE\"]\n" +
-                              "5. CONFIDENCE: [HIGH, MEDIUM, or LOW]\n" +
-                              "6. REASONING: [Brief explanation of your verdict]\n\n" +
+                              "4. CONFIDENCE: [HIGH, MEDIUM, or LOW]\n" +
+                              "5. REASONING: [Brief explanation of your verdict]\n\n" +
+                              "Example starting format:\n" +
+                              "\"True IMAGE CONTENT: ...\" or \"False IMAGE CONTENT: ...\" or \"Uncertain IMAGE CONTENT: ...\"\n\n" +
                               "Important: Focus only on verifiable facts. Do not speculate beyond what can be determined from the image content. Maintain a neutral tone throughout your analysis."
                     },
                     {
