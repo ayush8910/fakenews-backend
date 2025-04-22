@@ -61,7 +61,8 @@ app.post("/check-fake-news", upload.single('image'), async (req, res) => {
                               "2. EXTRACTED CLAIMS: [Numbered list of specific claims made]\n" +
                               "3. ANALYSIS: [Systematic assessment of each claim]\n" +
                               "4. CONFIDENCE: [HIGH, MEDIUM, or LOW]\n" +
-                              "5. REASONING: [Brief explanation of your verdict]\n\n" +
+                              "5. REASONING: [Brief explanation of your verdict]\n" +
+                              "6. SOURCES: [Provide specific sources that support or refute the claims, when available]\n\n" +
                               "Example starting format:\n" +
                               "\"True IMAGE CONTENT: ...\" or \"False IMAGE CONTENT: ...\" or \"Uncertain IMAGE CONTENT: ...\"\n\n" +
                               "Important: Focus only on verifiable facts. Do not speculate beyond what can be determined from the image content. Maintain a neutral tone throughout your analysis."
